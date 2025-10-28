@@ -1,0 +1,12 @@
+venv/
+
+.env
+
+__pycache__/
+
+*.pyc
+
+datasets/
+English_profanity_words.csv
+
+HateSpeechDataset.csv
