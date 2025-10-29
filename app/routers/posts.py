@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.models import PostCreate, PostUpdate, CommentCreate, PostResponse, CommentResponse, AuthorInfo
 from app.utils.dependencies import get_current_active_user
-from app.database import get_database
+from app.database import get_posts_collection
 from typing import List
 from datetime import datetime
 from bson import ObjectId
@@ -34,7 +34,7 @@ async def create_post(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Create a new post"""
-    db = get_database()
+    posts = await get_posts_collection()
     
     post_dict = {
         "author_id": current_user["_id"],
@@ -50,7 +50,7 @@ async def create_post(
         "updated_at": datetime.utcnow()
     }
     
-    result = await db.posts.insert_one(post_dict)
+    result = await posts.insert_one(post_dict)
     
     return PostResponse(
         id=str(result.inserted_id),
@@ -76,9 +76,9 @@ async def get_posts(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Get all posts (feed)"""
-    db = get_database()
+    posts = await get_posts_collection()
     
-    cursor = db.posts.find().sort("created_at", -1).skip(skip).limit(limit)
+    cursor = posts.find().sort("created_at", -1).skip(skip).limit(limit)
     posts = await cursor.to_list(length=limit)
     
     return [
@@ -107,10 +107,10 @@ async def get_post_by_id(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Get post by ID"""
-    db = get_database()
+    posts = await get_posts_collection()
     
     try:
-        post = await db.posts.find_one({"_id": ObjectId(post_id)})
+        post = await posts.find_one({"_id": ObjectId(post_id)})
     except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -146,10 +146,10 @@ async def like_post(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Like/Unlike a post"""
-    db = get_database()
+    posts = await get_posts_collection()
     
     try:
-        post = await db.posts.find_one({"_id": ObjectId(post_id)})
+        post = await posts.find_one({"_id": ObjectId(post_id)})
     except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -166,7 +166,7 @@ async def like_post(
     
     if current_user["_id"] in likes:
         # Unlike
-        await db.posts.update_one(
+        await posts.update_one(
             {"_id": ObjectId(post_id)},
             {"$pull": {"likes": current_user["_id"]}}
         )
@@ -174,7 +174,7 @@ async def like_post(
         likes_count = len(likes) - 1
     else:
         # Like
-        await db.posts.update_one(
+        await posts.update_one(
             {"_id": ObjectId(post_id)},
             {"$push": {"likes": current_user["_id"]}}
         )
@@ -194,10 +194,10 @@ async def add_comment(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Add a comment to a post"""
-    db = get_database()
+    posts = await get_posts_collection()
     
     try:
-        post = await db.posts.find_one({"_id": ObjectId(post_id)})
+        post = await posts.find_one({"_id": ObjectId(post_id)})
     except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -218,7 +218,7 @@ async def add_comment(
         "created_at": datetime.utcnow()
     }
     
-    await db.posts.update_one(
+    await posts.update_one(
         {"_id": ObjectId(post_id)},
         {"$push": {"comments": comment}}
     )
@@ -234,10 +234,10 @@ async def add_comment(
 @router.get("/{post_id}/comments", response_model=List[CommentResponse])
 async def get_comments(post_id: str):
     """Get all comments for a post"""
-    db = get_database()
+    posts = await get_posts_collection()
     
     try:
-        post = await db.posts.find_one({"_id": ObjectId(post_id)})
+        post = await posts.find_one({"_id": ObjectId(post_id)})
     except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -270,10 +270,10 @@ async def update_post(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Update a post"""
-    db = get_database()
+    posts = await get_posts_collection()
     
     try:
-        post = await db.posts.find_one({"_id": ObjectId(post_id)})
+        post = await posts.find_one({"_id": ObjectId(post_id)})
     except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -295,13 +295,13 @@ async def update_post(
     update_data = post_update.dict(exclude_unset=True)
     if update_data:
         update_data["updated_at"] = datetime.utcnow()
-        await db.posts.update_one(
+        await posts.update_one(
             {"_id": ObjectId(post_id)},
             {"$set": update_data}
         )
         
         # Get updated post
-        post = await db.posts.find_one({"_id": ObjectId(post_id)})
+        post = await posts.find_one({"_id": ObjectId(post_id)})
     
     return PostResponse(
         id=str(post["_id"]),
@@ -326,10 +326,10 @@ async def delete_post(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Delete a post"""
-    db = get_database()
+    posts = await get_posts_collection()
     
     try:
-        post = await db.posts.find_one({"_id": ObjectId(post_id)})
+        post = await posts.find_one({"_id": ObjectId(post_id)})
     except:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -348,7 +348,7 @@ async def delete_post(
             detail="You don't have permission to delete this post"
         )
     
-    await db.posts.delete_one({"_id": ObjectId(post_id)})
+    await posts.delete_one({"_id": ObjectId(post_id)})
     
     return {"message": "Post deleted successfully"}
 
@@ -361,9 +361,9 @@ async def get_user_posts(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Get all posts by a specific user"""
-    db = get_database()
+    posts = await get_posts_collection()
     
-    cursor = db.posts.find(
+    cursor = posts.find(
         {"author_id": user_id}
     ).sort("created_at", -1).skip(skip).limit(limit)
     
