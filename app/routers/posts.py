@@ -181,7 +181,6 @@ async def add_comment(
     comment_data: CommentCreate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Add a comment to a post"""
     posts = await get_posts_collection()
     
     try:
