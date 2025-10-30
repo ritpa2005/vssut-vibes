@@ -8,10 +8,8 @@ from datetime import datetime
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user: dict = Depends(get_current_active_user)):
-    """Get current user profile"""
     return UserResponse(
         id=current_user["_id"],
         name=current_user["name"],
@@ -30,27 +28,21 @@ async def get_current_user_profile(current_user: dict = Depends(get_current_acti
         joined_date=current_user.get("created_at", datetime.utcnow())
     )
 
-
 @router.put("/me", response_model=UserResponse)
 async def update_current_user(
     user_update: UserUpdate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Update current user profile"""
     users_collection = await get_users_collection()
-    
-    # Prepare update data
     update_data = user_update.dict(exclude_unset=True)
     if update_data:
         update_data["updated_at"] = datetime.utcnow()
         
-        # Update user in database
         await users_collection.update_one(
             {"_id": ObjectId(current_user["_id"])},
             {"$set": update_data}
         )
         
-        # Get updated user
         updated_user = await users_collection.find_one({"_id": ObjectId(current_user["_id"])})
         updated_user["_id"] = str(updated_user["_id"])
         
@@ -74,10 +66,8 @@ async def update_current_user(
     
     return await get_current_user_profile(current_user)
 
-
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_by_id(user_id: str):
-    """Get user by ID"""
     users_collection = await get_users_collection()
     
     try:
@@ -112,7 +102,6 @@ async def get_user_by_id(user_id: str):
         joined_date=user.get("created_at", datetime.utcnow())
     )
 
-
 @router.get("/", response_model=List[UserResponse])
 async def search_users(
     query: Optional[str] = None,
@@ -120,7 +109,6 @@ async def search_users(
     limit: int = 20,
     skip: int = 0
 ):
-    """Search users"""
     users_collection = await get_users_collection()
     filters = {}
     
@@ -129,7 +117,6 @@ async def search_users(
             {"name": {"$regex": query, "$options": "i"}},
             {"registration_number": {"$regex": query, "$options": "i"}}
         ]
-    
     if department:
         filters["department"] = department
     
@@ -157,13 +144,11 @@ async def search_users(
         for user in users
     ]
 
-
 @router.post("/connect/{user_id}")
 async def connect_with_user(
     user_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Connect with another user"""
     users_collection = await get_users_collection()
     
     if user_id == current_user["_id"]:
@@ -186,7 +171,6 @@ async def connect_with_user(
             detail="User not found"
         )
     
-    # Check if already connected
     current_connections = current_user.get("connections", [])
     if user_id in current_connections:
         raise HTTPException(
@@ -194,7 +178,6 @@ async def connect_with_user(
             detail="Already connected with this user"
         )
     
-    # Add connections both ways
     await users_collection.update_one(
         {"_id": ObjectId(current_user["_id"])},
         {"$push": {"connections": user_id}}
@@ -207,29 +190,22 @@ async def connect_with_user(
     
     return {"message": "Connected successfully"}
 
-
 @router.delete("/connect/{user_id}")
 async def disconnect_user(
     user_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Disconnect from a user"""
     users_collection = await get_users_collection()
-    
-    # Check if connected
     current_connections = current_user.get("connections", [])
     if user_id not in current_connections:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Not connected with this user"
         )
-    
-    # Remove connections both ways
     await users_collection.update_one(
         {"_id": ObjectId(current_user["_id"])},
         {"$pull": {"connections": user_id}}
     )
-    
     await users_collection.update_one(
         {"_id": ObjectId(user_id)},
         {"$pull": {"connections": current_user["_id"]}}

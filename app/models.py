@@ -2,16 +2,12 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 
-
 class UserBase(BaseModel):
-    """Base user fields"""
     name: str
     email: EmailStr
     department: str
 
-
 class UserCreate(BaseModel):
-    """Schema for user registration"""
     name: str
     registration_number: str
     email: EmailStr
@@ -31,9 +27,7 @@ class UserCreate(BaseModel):
             }
         }
 
-
 class UserUpdate(BaseModel):
-    """Schema for updating user profile"""
     bio: Optional[str] = None
     location: Optional[str] = None
     linkedin_url: Optional[str] = None
@@ -43,9 +37,7 @@ class UserUpdate(BaseModel):
     year_of_study: Optional[str] = None
     is_alumni: Optional[bool] = None
 
-
 class UserInDB(BaseModel):
-    """Complete user model as stored in database"""
     id: str = Field(alias="_id")
     name: str
     registration_number: str
@@ -67,9 +59,7 @@ class UserInDB(BaseModel):
     class Config:
         populate_by_name = True
 
-
 class UserResponse(BaseModel):
-    """Schema for user data returned to client (no password)"""
     id: str
     name: str
     registration_number: str
@@ -108,11 +98,10 @@ class UserResponse(BaseModel):
         }
 
 class JobCreate(BaseModel):
-    """Schema for creating a job/internship"""
     title: str
     company: str
     location: str
-    type: str  # Internship, Full-time, Part-time, Contract
+    type: str 
     salary: Optional[str] = None
     description: str
     requirements: str
@@ -134,9 +123,7 @@ class JobCreate(BaseModel):
             }
         }
 
-
 class JobUpdate(BaseModel):
-    """Schema for updating a job"""
     title: Optional[str] = None
     company: Optional[str] = None
     location: Optional[str] = None
@@ -148,9 +135,7 @@ class JobUpdate(BaseModel):
     deadline: Optional[datetime] = None
     is_active: Optional[bool] = None
 
-
 class JobInDB(BaseModel):
-    """Complete job model as stored in database"""
     id: str = Field(alias="_id")
     title: str
     company: str
@@ -171,9 +156,7 @@ class JobInDB(BaseModel):
     class Config:
         populate_by_name = True
 
-
 class JobResponse(BaseModel):
-    """Schema for job data returned to client"""
     id: str
     title: str
     company: str
@@ -184,7 +167,7 @@ class JobResponse(BaseModel):
     requirements: str
     posted_by_name: str
     logo: str
-    posted_date: str  # Human-readable format
+    posted_date: str 
     deadline: Optional[datetime]
     is_active: bool
     applicants_count: int
@@ -212,7 +195,6 @@ class JobResponse(BaseModel):
         }
 
 class PostCreate(BaseModel):
-    """Schema for creating a post"""
     content: str
     image: Optional[str] = None
     
@@ -224,29 +206,21 @@ class PostCreate(BaseModel):
             }
         }
 
-
 class PostUpdate(BaseModel):
-    """Schema for updating a post"""
     content: Optional[str] = None
     image: Optional[str] = None
 
-
 class CommentCreate(BaseModel):
-    """Schema for creating a comment"""
     content: str
 
-
 class Comment(BaseModel):
-    """Comment schema"""
     author_id: str
     author_name: str
     author_picture: str
     content: str
     created_at: datetime
 
-
 class PostInDB(BaseModel):
-    """Complete post model as stored in database"""
     id: str = Field(alias="_id")
     author_id: str
     author_name: str
@@ -263,17 +237,13 @@ class PostInDB(BaseModel):
     class Config:
         populate_by_name = True
 
-
 class AuthorInfo(BaseModel):
-    """Author information for post response"""
     name: str
     registration_number: str
     department: str
     profile_picture: str
 
-
 class PostResponse(BaseModel):
-    """Schema for post data returned to client"""
     id: str
     author: AuthorInfo
     content: str
@@ -302,9 +272,7 @@ class PostResponse(BaseModel):
             }
         }
 
-
 class CommentResponse(BaseModel):
-    """Schema for comment returned to client"""
     author_name: str
     author_picture: str
     content: str

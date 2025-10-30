@@ -11,11 +11,11 @@ async def get_database():
 
 async def connect_to_mongo():
     db.client = AsyncIOMotorClient(settings.MONGODB_URI)
-    print("✅ Connected to MongoDB Atlas!")
+    print("Connected to MongoDB Atlas!")
 
 async def close_mongo_connection():
     db.client.close()
-    print("❌ Closed MongoDB connection!")
+    print("Closed MongoDB connection!")
 
 async def get_users_collection():
     database = await get_database()

@@ -20,8 +20,6 @@ class LoginRequest(BaseModel):
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate):
     users_collection = await get_users_collection()
-    
-    # Check if user already exists
     existing_user = await users_collection.find_one({
         "$or": [
             {"email": user_data.email},
@@ -35,7 +33,6 @@ async def register(user_data: UserCreate):
             detail="User with this email or registration number already exists"
         )
     
-    # Create new user document
     user_dict = {
         "name": user_data.name,
         "registration_number": user_data.registration_number,
@@ -58,7 +55,6 @@ async def register(user_data: UserCreate):
     result = await users_collection.insert_one(user_dict)
     user_id = str(result.inserted_id)
     
-    # Create access token
     access_token = create_access_token(data={"sub": user_id})
     
     return {
@@ -78,8 +74,6 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
 ):
     users_collection = await get_users_collection()
-    
-    # Find user by email (username field contains email)
     user = await users_collection.find_one({"email": form_data.username})
     
     if not user or not verify_password(form_data.password, user["password"]):
@@ -89,7 +83,6 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Create access token
     access_token = create_access_token(data={"sub": str(user["_id"])})
     
     return {
@@ -107,8 +100,6 @@ async def login(
 @router.post("/login/json", response_model=Token)
 async def login_json(login_data: LoginRequest):
     users_collection = await get_users_collection()
-    
-    # Find user by email
     user = await users_collection.find_one({"email": login_data.email})
     
     if not user or not verify_password(login_data.password, user["password"]):
@@ -118,7 +109,6 @@ async def login_json(login_data: LoginRequest):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Create access token
     access_token = create_access_token(data={"sub": str(user["_id"])})
     
     return {

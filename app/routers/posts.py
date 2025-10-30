@@ -8,9 +8,7 @@ from bson import ObjectId
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
-
 def format_time_ago(dt: datetime) -> str:
-    """Convert datetime to human-readable format"""
     now = datetime.utcnow()
     diff = now - dt
     
@@ -27,13 +25,11 @@ def format_time_ago(dt: datetime) -> str:
     else:
         return "just now"
 
-
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 async def create_post(
     post_data: PostCreate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Create a new post"""
     posts = await get_posts_collection()
     
     post_dict = {
@@ -68,14 +64,12 @@ async def create_post(
         is_liked=False
     )
 
-
 @router.get("/", response_model=List[PostResponse])
 async def get_posts(
     limit: int = 20,
     skip: int = 0,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get all posts (feed)"""
     posts = await get_posts_collection()
     
     cursor = posts.find().sort("created_at", -1).skip(skip).limit(limit)
@@ -100,13 +94,11 @@ async def get_posts(
         for post in posts
     ]
 
-
 @router.get("/{post_id}", response_model=PostResponse)
 async def get_post_by_id(
     post_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get post by ID"""
     posts = await get_posts_collection()
     
     try:
@@ -139,13 +131,11 @@ async def get_post_by_id(
         is_liked=current_user["_id"] in post.get("likes", [])
     )
 
-
 @router.post("/{post_id}/like")
 async def like_post(
     post_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Like/Unlike a post"""
     posts = await get_posts_collection()
     
     try:
@@ -165,7 +155,6 @@ async def like_post(
     likes = post.get("likes", [])
     
     if current_user["_id"] in likes:
-        # Unlike
         await posts.update_one(
             {"_id": ObjectId(post_id)},
             {"$pull": {"likes": current_user["_id"]}}
@@ -173,7 +162,6 @@ async def like_post(
         message = "Post unliked"
         likes_count = len(likes) - 1
     else:
-        # Like
         await posts.update_one(
             {"_id": ObjectId(post_id)},
             {"$push": {"likes": current_user["_id"]}}
@@ -233,7 +221,6 @@ async def add_comment(
 
 @router.get("/{post_id}/comments", response_model=List[CommentResponse])
 async def get_comments(post_id: str):
-    """Get all comments for a post"""
     posts = await get_posts_collection()
     
     try:
@@ -269,7 +256,6 @@ async def update_post(
     post_update: PostUpdate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Update a post"""
     posts = await get_posts_collection()
     
     try:
@@ -299,8 +285,6 @@ async def update_post(
             {"_id": ObjectId(post_id)},
             {"$set": update_data}
         )
-        
-        # Get updated post
         post = await posts.find_one({"_id": ObjectId(post_id)})
     
     return PostResponse(
@@ -319,13 +303,11 @@ async def update_post(
         is_liked=current_user["_id"] in post.get("likes", [])
     )
 
-
 @router.delete("/{post_id}")
 async def delete_post(
     post_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Delete a post"""
     posts = await get_posts_collection()
     
     try:
@@ -352,7 +334,6 @@ async def delete_post(
     
     return {"message": "Post deleted successfully"}
 
-
 @router.get("/user/{user_id}", response_model=List[PostResponse])
 async def get_user_posts(
     user_id: str,
@@ -360,7 +341,6 @@ async def get_user_posts(
     skip: int = 0,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get all posts by a specific user"""
     posts = await get_posts_collection()
     
     cursor = posts.find(

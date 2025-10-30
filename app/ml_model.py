@@ -12,7 +12,6 @@ from textblob import TextBlob
 import warnings
 warnings.filterwarnings('ignore')
 
-# Download required NLTK data
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
@@ -31,48 +30,30 @@ class HateSpeechDetector:
         self.use_spell_check = use_spell_check
         
     def correct_spelling(self, text):
-        """Correct spelling mistakes in text"""
         try:
-            # TextBlob's spell checker
             corrected = str(TextBlob(text).correct())
             return corrected
         except:
-            # If correction fails, return original text
             return text
     
     def preprocess_text(self, text):
-        """Clean and preprocess text data"""
-        # Handle missing values
         if pd.isna(text):
             return ""
-        
-        # Convert to string if not already
         text = str(text)
-        
-        # Convert to lowercase
         text = text.lower()
         
-        # Remove URLs
         text = re.sub(r'http\S+|www\S+|https\S+', '', text)
-        
-        # Remove mentions and hashtags
         text = re.sub(r'@\w+|#\w+', '', text)
         
-        # Replace common obfuscation patterns before spell check
-        text = re.sub(r'(\w)\1{2,}', r'\1\1', text)  # "haaate" -> "haate"
-        text = re.sub(r'[^\w\s]', ' ', text)  # Replace special chars with space
+        text = re.sub(r'(\w)\1{2,}', r'\1\1', text)
+        text = re.sub(r'[^\w\s]', ' ', text)
         
-        # Apply spell checking if enabled
         if self.use_spell_check:
             text = self.correct_spelling(text)
         
-        # Remove numbers
         text = re.sub(r'\d+', '', text)
-        
-        # Remove extra whitespace
         text = re.sub(r'\s+', ' ', text).strip()
         
-        # Tokenize and lemmatize
         words = text.split()
         words = [self.lemmatizer.lemmatize(word) for word in words 
                  if word not in self.stop_words and len(word) > 2]
@@ -80,7 +61,6 @@ class HateSpeechDetector:
         return ' '.join(words)
     
     def prepare_features(self, texts, fit=False):
-        """Extract TF-IDF features from text"""
         if fit:
             self.vectorizer = TfidfVectorizer(
                 max_features=5000,
@@ -94,7 +74,6 @@ class HateSpeechDetector:
         return features
     
     def train(self, X_train, y_train, model_type='logistic'):
-        """Train the hate speech detection model"""
         models = {
             'logistic': LogisticRegression(max_iter=1000, random_state=42),
             'naive_bayes': MultinomialNB(),
@@ -104,19 +83,17 @@ class HateSpeechDetector:
         self.model.fit(X_train, y_train)
         
     def predict(self, texts):
-        """Predict hate speech for given texts"""
         if isinstance(texts, str):
             texts = [texts]
         
         processed_texts = [self.preprocess_text(text) for text in texts]
         features = self.prepare_features(processed_texts, fit=False)
         predictions = self.model.predict(features)
-        probabilities = self.model.predict_proba(features) if hasattr(self.model, 'predict_proba') else None
+        probabilities = self.model.predict_probability(features) if hasattr(self.model, 'predict_probability') else None
         
         return predictions, probabilities
     
     def evaluate(self, X_test, y_test):
-        """Evaluate model performance"""
         predictions = self.model.predict(X_test)
         
         print("Model Evaluation:")
@@ -130,19 +107,14 @@ class HateSpeechDetector:
 
 
 def load_dataset(csv_path):
-    """Load dataset from CSV file"""
     print(f"Loading dataset from: {csv_path}")
     try:
         df = pd.read_csv(csv_path)
         print(f"Dataset loaded successfully!")
         print(f"Shape: {df.shape}")
         print(f"Columns: {df.columns.tolist()}")
-        
-        # Standardize column names based on what's available
-        # Handle different possible column name formats
         column_mapping = {}
         
-        # Check for content/text columns
         if 'Content' in df.columns:
             column_mapping['Content'] = 'content'
         elif 'text' in df.columns:
@@ -150,7 +122,6 @@ def load_dataset(csv_path):
         elif 'Text' in df.columns:
             column_mapping['Text'] = 'content'
         
-        # Check for label columns
         if 'Label' in df.columns:
             column_mapping['Label'] = 'labels'
         elif 'is_offensive' in df.columns:
@@ -160,29 +131,20 @@ def load_dataset(csv_path):
         elif 'hate_speech' in df.columns:
             column_mapping['hate_speech'] = 'labels'
         
-        # Apply the mapping
         df = df.rename(columns=column_mapping)
         
-        # Check for required columns after mapping
         if 'content' not in df.columns or 'labels' not in df.columns:
             raise ValueError(f"CSV must contain text and label columns. Found: {df.columns.tolist()}")
         
-        # Keep only content and labels columns
         df = df[['content', 'labels']]
         
-        # Remove header row if 'Label' string exists in labels column
         df = df[df['labels'] != 'Label']
         df = df[df['labels'] != 'is_offensive']
         print(f"Removed header rows from data (if any)")
         
-        # Convert labels to numeric (in case they are strings)
         df['labels'] = pd.to_numeric(df['labels'], errors='coerce')
-        
-        # Display basic statistics
         print(f"\nLabel distribution:")
         print(df['labels'].value_counts())
-        
-        # Remove any rows with missing values
         df = df.dropna(subset=['content', 'labels'])
         print(f"\nShape after removing missing values: {df.shape}")
         
@@ -198,7 +160,6 @@ def load_dataset(csv_path):
 
 
 def combine_datasets(csv_paths):
-    """Load and combine multiple datasets"""
     print("=" * 50)
     print("LOADING MULTIPLE DATASETS")
     print("=" * 50)
@@ -218,7 +179,6 @@ def combine_datasets(csv_paths):
     if not all_datasets:
         raise ValueError("No datasets were successfully loaded!")
     
-    # Combine all datasets
     combined_df = pd.concat(all_datasets, ignore_index=True)
     
     print("\n" + "=" * 50)
@@ -230,7 +190,6 @@ def combine_datasets(csv_paths):
     print(f"\nLabel percentages:")
     print(combined_df['labels'].value_counts(normalize=True) * 100)
     
-    # Remove duplicates
     original_size = len(combined_df)
     combined_df = combined_df.drop_duplicates(subset=['content'], keep='first')
     duplicates_removed = original_size - len(combined_df)
@@ -245,13 +204,9 @@ if __name__ == "__main__":
         "English_profanity_words.csv",
     ]
     
-    # Load and combine all datasets
     df = combine_datasets(CSV_FILE_PATHS)
-    
-    # Initialize detector with spell checking enabled
     detector = HateSpeechDetector(use_spell_check=True)
     
-    # Show example of spell correction
     print("\n" + "=" * 50)
     print("SPELL CORRECTION EXAMPLES:")
     print("=" * 50)
@@ -265,15 +220,11 @@ if __name__ == "__main__":
         print(f"Original:  {text}")
         print(f"Corrected: {corrected}\n")
     
-    # Preprocess texts
     print("Preprocessing texts with spell correction...")
     df['processed_text'] = df['content'].apply(detector.preprocess_text)
-    
-    # Remove empty processed texts
     df = df[df['processed_text'].str.len() > 0]
     print(f"Shape after removing empty texts: {df.shape}")
     
-    # Split data
     print("\nSplitting data into train and test sets...")
     X_train, X_test, y_train, y_test = train_test_split(
         df['processed_text'], df['labels'], 
@@ -285,12 +236,10 @@ if __name__ == "__main__":
     print(f"Training set size: {len(X_train)}")
     print(f"Test set size: {len(X_test)}")
     
-    # Extract features
     print("\nExtracting features...")
     X_train_features = detector.prepare_features(X_train, fit=True)
     X_test_features = detector.prepare_features(X_test, fit=False)
     
-    # Train models and compare
     print("\nTraining and comparing models...")
     print("=" * 50)
     
@@ -300,14 +249,12 @@ if __name__ == "__main__":
         print(f"\n{model_name.upper().replace('_', ' ')} MODEL:")
         detector.train(X_train_features, y_train, model_type=model_name)
         
-        # Calculate accuracy
         predictions = detector.model.predict(X_test_features)
         accuracy = accuracy_score(y_test, predictions)
         model_results[model_name] = accuracy
         
         detector.evaluate(X_test_features, y_test)
     
-    # Display best model
     print("\n" + "=" * 50)
     print("MODEL COMPARISON SUMMARY:")
     print("=" * 50)
@@ -317,7 +264,6 @@ if __name__ == "__main__":
     best_model = max(model_results, key=model_results.get)
     print(f"\nBest performing model: {best_model.upper().replace('_', ' ')}")
     
-    # Test with new examples
     print("\n" + "=" * 50)
     print("Testing with new examples:")
     print("=" * 50)
@@ -327,8 +273,6 @@ if __name__ == "__main__":
         "Those people are disgusting and should be removed",
         "Let's celebrate our differences and unite as one"
     ]
-    
-    # Retrain with best model for final predictions
     detector.train(X_train_features, y_train, model_type=best_model)
     
     predictions, probabilities = detector.predict(test_texts)

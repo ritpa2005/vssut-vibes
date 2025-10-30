@@ -8,7 +8,6 @@ from bson import ObjectId
 
 router = APIRouter(prefix="/jobs", tags=["Jobs & Internships"])
 
-
 def format_time_ago(dt: datetime) -> str:
     now = datetime.utcnow()
     diff = now - dt
@@ -32,7 +31,6 @@ async def create_job(
     job_data: JobCreate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Create a new job/internship posting"""
     jobs_collection = await get_jobs_collection()
     
     job_dict = {
@@ -74,7 +72,6 @@ async def create_job(
         views=job_dict["views"]
     )
 
-
 @router.get("/", response_model=List[JobResponse])
 async def get_jobs(
     job_type: Optional[str] = Query(None, description="Filter by type: Internship, Full-time, Part-time, Contract"),
@@ -84,19 +81,15 @@ async def get_jobs(
     limit: int = 20,
     skip: int = 0
 ):
-    """Get all jobs/internships with filters"""
     jobs_collection = await get_jobs_collection()
     filters = {"is_active": True}
     
     if job_type:
         filters["type"] = job_type
-    
     if location:
         filters["location"] = {"$regex": location, "$options": "i"}
-    
     if company:
         filters["company"] = {"$regex": company, "$options": "i"}
-    
     if search:
         filters["$or"] = [
             {"title": {"$regex": search, "$options": "i"}},
@@ -128,10 +121,8 @@ async def get_jobs(
         for job in jobs
     ]
 
-
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job_by_id(job_id: str):
-    """Get job details by ID"""
     jobs_collection = await get_jobs_collection()
     
     try:
@@ -148,7 +139,6 @@ async def get_job_by_id(job_id: str):
             detail="Job not found"
         )
     
-    # Increment views
     await jobs_collection.update_one(
         {"_id": ObjectId(job_id)},
         {"$inc": {"views": 1}}
@@ -179,7 +169,6 @@ async def apply_for_job(
     job_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Apply for a job/internship"""
     jobs_collection = await get_jobs_collection()
     
     try:
@@ -222,7 +211,6 @@ async def update_job(
     job_update: JobUpdate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Update a job posting"""
     jobs_collection = await get_jobs_collection()
     
     try:
@@ -252,7 +240,6 @@ async def update_job(
             {"$set": update_data}
         )
         
-        # Get updated job
         job = await jobs_collection.find_one({"_id": ObjectId(job_id)})(
             {"_id": ObjectId(job_id)},
             {"$set": update_data}
@@ -282,7 +269,6 @@ async def delete_job(
     job_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Delete/deactivate a job posting"""
     jobs_collection = get_jobs_collection()
     
     try:
