@@ -4,7 +4,7 @@ from app.utils.security import decode_token
 from app.database import get_users_collection
 from bson import ObjectId
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login/json")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     credentials_exception = HTTPException(
@@ -21,8 +21,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     if user_id is None:
         raise credentials_exception
     
+    try:
+        user_obj_id = ObjectId(user_id)
+    except:
+        raise credentials_exception
+    
     users_collection = await get_users_collection()
-    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    user = await users_collection.find_one({"_id": ObjectId(user_obj_id)})
     
     if user is None:
         raise credentials_exception

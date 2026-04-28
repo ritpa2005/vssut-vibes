@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Form, File, UploadFile
 from app.models import JobCreate, JobUpdate, JobResponse
 from app.utils.dependencies import get_current_active_user
 from app.database import get_jobs_collection
@@ -28,24 +28,42 @@ def format_time_ago(dt: datetime) -> str:
 
 @router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
 async def create_job(
-    job_data: JobCreate,
+    title: str = Form(...),
+    company: str = Form(...),
+    location: str = Form(""),
+    type: str = Form(...),
+    salary: str = Form(""),
+    description: str = Form(...),
+    requirements: str = Form(...),
+    deadline: str = Form(None),
+    logo: UploadFile = File(None),
     current_user: dict = Depends(get_current_active_user)
 ):
     jobs_collection = await get_jobs_collection()
     
+    logo_url = None
+    if logo:
+        file_bytes = await logo.read()
+        file_name = f"job_{datetime.utcnow().timestamp()}.jpg"
+        with open(f"media/jobs/{file_name}", "wb") as f:
+            f.write(file_bytes)
+        logo_url = f"http://127.0.0.1:8000/media/jobs/{file_name}"
+    else:
+        logo_url = "https://default-logo.jpg"
+    
     job_dict = {
-        "title": job_data.title,
-        "company": job_data.company,
-        "location": job_data.location,
-        "type": job_data.type,
-        "salary": job_data.salary,
-        "description": job_data.description,
-        "requirements": job_data.requirements,
+        "title": title,
+        "company": company,
+        "location": location,
+        "type": type,
+        "salary": salary,
+        "description": description,
+        "requirements": requirements,
         "posted_by": current_user["_id"],
         "posted_by_name": current_user["name"],
-        "logo": job_data.logo or "https://images.pexels.com/photos/270637/pexels-photo-270637.jpeg?auto=compress&cs=tinysrgb&w=400",
+        "logo": logo_url or "https://images.pexels.com/photos/270637/pexels-photo-270637.jpeg?auto=compress&cs=tinysrgb&w=400",
         "posted_date": datetime.utcnow(),
-        "deadline": job_data.deadline,
+        "deadline": deadline,
         "is_active": True,
         "applicants": [],
         "views": 0

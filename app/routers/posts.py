@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from app.models import PostCreate, PostUpdate, CommentCreate, PostResponse, CommentResponse, AuthorInfo
 from app.utils.dependencies import get_current_active_user
 from app.database import get_posts_collection
@@ -27,10 +27,20 @@ def format_time_ago(dt: datetime) -> str:
 
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 async def create_post(
-    post_data: PostCreate,
+    content: str = Form(...),
+    image: UploadFile = File(None),
     current_user: dict = Depends(get_current_active_user)
 ):
     posts = await get_posts_collection()
+    
+    image_url = None
+    if image:
+        file_bytes = await image.read()
+        file_name = f"post_{datetime.utcnow().timestamp()}.jpg"
+        with open(f"media/posts/{file_name}", "wb") as f:
+            f.write(file_bytes)
+        image_url = f"/media/posts/{file_name}"
+
     
     post_dict = {
         "author_id": current_user["_id"],
@@ -38,8 +48,8 @@ async def create_post(
         "author_registration_number": current_user["registration_number"],
         "author_department": current_user["department"],
         "author_profile_picture": current_user.get("profile_picture", ""),
-        "content": post_data.content,
-        "image": post_data.image,
+        "content": content,
+        "image": image_url,
         "likes": [],
         "comments": [],
         "created_at": datetime.utcnow(),
