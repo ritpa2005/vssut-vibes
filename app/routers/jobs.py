@@ -240,10 +240,7 @@ async def update_job(
             {"$set": update_data}
         )
         
-        job = await jobs_collection.find_one({"_id": ObjectId(job_id)})(
-            {"_id": ObjectId(job_id)},
-            {"$set": update_data}
-        )
+        job = await jobs_collection.find_one({"_id": ObjectId(job_id)})
     
     return JobResponse(
         id=str(job["_id"]),
@@ -269,7 +266,7 @@ async def delete_job(
     job_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    jobs_collection = get_jobs_collection()
+    jobs_collection = await get_jobs_collection()
     
     try:
         job = await jobs_collection.find_one({"_id": ObjectId(job_id)})

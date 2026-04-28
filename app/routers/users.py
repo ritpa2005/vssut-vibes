@@ -4,29 +4,33 @@ from app.utils.dependencies import get_current_active_user
 from app.database import get_users_collection
 from typing import List, Optional
 from bson import ObjectId
+from bson.errors import InvalidId
 from datetime import datetime
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+def user_to_response(user: dict):
+    return UserResponse(
+        id=user["_id"],
+        name=user["name"],
+        registration_number=user["registration_number"],
+        email=user["email"],
+        department=user["department"],
+        year_of_study=user.get("year_of_study"),
+        is_alumni=user.get("is_alumni", False),
+        bio=user.get("bio", ""),
+        location=user.get("location", ""),
+        profile_picture=user.get("profile_picture", ""),
+        linkedin_url=user.get("linkedin_url"),
+        github_url=user.get("github_url"),
+        skills=user.get("skills", []),
+        connections=len(user.get("connections", [])),
+        joined_date=user.get("created_at", datetime.utcnow())
+    )
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user: dict = Depends(get_current_active_user)):
-    return UserResponse(
-        id=current_user["_id"],
-        name=current_user["name"],
-        registration_number=current_user["registration_number"],
-        email=current_user["email"],
-        department=current_user["department"],
-        year_of_study=current_user.get("year_of_study"),
-        is_alumni=current_user.get("is_alumni", False),
-        bio=current_user.get("bio", ""),
-        location=current_user.get("location", "Burla, Odisha"),
-        profile_picture=current_user.get("profile_picture", ""),
-        linkedin_url=current_user.get("linkedin_url"),
-        github_url=current_user.get("github_url"),
-        skills=current_user.get("skills", []),
-        connections=len(current_user.get("connections", [])),
-        joined_date=current_user.get("created_at", datetime.utcnow())
-    )
+    return user_to_response(current_user)
 
 @router.put("/me", response_model=UserResponse)
 async def update_current_user(
@@ -46,61 +50,9 @@ async def update_current_user(
         updated_user = await users_collection.find_one({"_id": ObjectId(current_user["_id"])})
         updated_user["_id"] = str(updated_user["_id"])
         
-        return UserResponse(
-            id=updated_user["_id"],
-            name=updated_user["name"],
-            registration_number=updated_user["registration_number"],
-            email=updated_user["email"],
-            department=updated_user["department"],
-            year_of_study=updated_user.get("year_of_study"),
-            is_alumni=updated_user.get("is_alumni", False),
-            bio=updated_user.get("bio", ""),
-            location=updated_user.get("location", "Burla, Odisha"),
-            profile_picture=updated_user.get("profile_picture", ""),
-            linkedin_url=updated_user.get("linkedin_url"),
-            github_url=updated_user.get("github_url"),
-            skills=updated_user.get("skills", []),
-            connections=len(updated_user.get("connections", [])),
-            joined_date=updated_user.get("created_at", datetime.utcnow())
-        )
+        return user_to_response(updated_user)
     
-    return await get_current_user_profile(current_user)
-
-@router.get("/{user_id}", response_model=UserResponse)
-async def get_user_by_id(user_id: str):
-    users_collection = await get_users_collection()
-    
-    try:
-        user = await users_collection.find_one({"_id": ObjectId(user_id)})
-    except:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user ID format"
-        )
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    return UserResponse(
-        id=str(user["_id"]),
-        name=user["name"],
-        registration_number=user["registration_number"],
-        email=user["email"],
-        department=user["department"],
-        year_of_study=user.get("year_of_study"),
-        is_alumni=user.get("is_alumni", False),
-        bio=user.get("bio", ""),
-        location=user.get("location", "Burla, Odisha"),
-        profile_picture=user.get("profile_picture", ""),
-        linkedin_url=user.get("linkedin_url"),
-        github_url=user.get("github_url"),
-        skills=user.get("skills", []),
-        connections=len(user.get("connections", [])),
-        joined_date=user.get("created_at", datetime.utcnow())
-    )
+    return user_to_response(current_user)
 
 @router.get("/", response_model=List[UserResponse])
 async def search_users(
@@ -124,25 +76,29 @@ async def search_users(
     users = await cursor.to_list(length=limit)
     
     return [
-        UserResponse(
-            id=str(user["_id"]),
-            name=user["name"],
-            registration_number=user["registration_number"],
-            email=user["email"],
-            department=user["department"],
-            year_of_study=user.get("year_of_study"),
-            is_alumni=user.get("is_alumni", False),
-            bio=user.get("bio", ""),
-            location=user.get("location", "Burla, Odisha"),
-            profile_picture=user.get("profile_picture", ""),
-            linkedin_url=user.get("linkedin_url"),
-            github_url=user.get("github_url"),
-            skills=user.get("skills", []),
-            connections=len(user.get("connections", [])),
-            joined_date=user.get("created_at", datetime.utcnow())
-        )
+        user_to_response(user)
         for user in users
     ]
+
+@router.get("/{user_id}", response_model=UserResponse)
+async def get_user_by_id(user_id: str):
+    users_collection = await get_users_collection()
+    
+    try:
+        user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format"
+        )
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user
 
 @router.post("/connect/{user_id}")
 async def connect_with_user(
@@ -159,7 +115,7 @@ async def connect_with_user(
     
     try:
         target_user = await users_collection.find_one({"_id": ObjectId(user_id)})
-    except:
+    except InvalidId:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid user ID format"
@@ -196,6 +152,15 @@ async def disconnect_user(
     current_user: dict = Depends(get_current_active_user)
 ):
     users_collection = await get_users_collection()
+
+    try:
+        ObjectId(user_id)
+    except InvalidId:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format"
+        )
+
     current_connections = current_user.get("connections", [])
     if user_id not in current_connections:
         raise HTTPException(
