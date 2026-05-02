@@ -277,3 +277,120 @@ class CommentResponse(BaseModel):
     author_picture: str
     content: str
     created_at: datetime
+
+ 
+class RoomCreate(BaseModel):
+    name: str
+    topic: Optional[str] = None
+    max_members: int = 10
+ 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "DSA Mentorship - Batch 3",
+                "topic": "Data Structures & Algorithms",
+                "max_members": 15
+            }
+        }
+
+class RoomUpdate(BaseModel):
+    name: Optional[str] = None
+    topic: Optional[str] = None
+    max_members: Optional[int] = None
+    is_active: Optional[bool] = None
+ 
+ 
+class RoomInDB(BaseModel):
+    id: str
+    name: str
+    topic: Optional[str]
+    mentor_id: str
+    mentor_name: str
+    mentor_picture: str
+    members: List[str]
+    invite_code: str
+    messages: List[dict]
+    max_members: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+class RoomResponse(BaseModel):
+    id: str
+    name: str
+    topic: Optional[str]
+    mentor_id: str
+    mentor_name: str
+    mentor_picture: str
+    member_count: int
+    max_members: int
+    invite_code: str
+    invite_link: str
+    is_active: bool
+    last_message: Optional[str]
+    created_at: datetime
+ 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "507f1f77bcf86cd799439011",
+                "name": "DSA Mentorship - Batch 3",
+                "topic": "Data Structures & Algorithms",
+                "mentor_id": "507f1f77bcf86cd799439012",
+                "mentor_name": "Dr. Amit Kumar",
+                "mentor_picture": "https://example.com/pic.jpg",
+                "member_count": 5,
+                "max_members": 15,
+                "invite_code": "aB3xQz9mKpLw",
+                "invite_link": "https://vssutvibes.in/rooms/join/aB3xQz9mKpLw",
+                "is_active": True,
+                "last_message": "See you all tomorrow at 5PM!",
+                "created_at": "2024-08-15T10:30:00"
+            }
+        }
+
+class RoomPreviewResponse(BaseModel):
+    id: str
+    name: str
+    topic: Optional[str]
+    mentor_name: str
+    mentor_picture: str
+    member_count: int
+    max_members: int
+    is_active: bool
+ 
+class MessageCreate(BaseModel):
+    content: str
+    attachment: Optional[str] = None
+ 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "content": "Here is the problem set for this week.",
+                "attachment": "https://example.com/problemset.pdf"
+            }
+        }
+
+class MessageResponse(BaseModel):
+    id: str
+    sender_id: str
+    sender_name: str
+    sender_picture: str
+    content: str
+    attachment: Optional[str]
+    sent_at: datetime
+    read_by_count: int
+ 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "0",
+                "sender_id": "507f1f77bcf86cd799439012",
+                "sender_name": "Dr. Amit Kumar",
+                "sender_picture": "https://example.com/pic.jpg",
+                "content": "Welcome everyone!",
+                "attachment": None,
+                "sent_at": "2024-08-15T10:35:00",
+                "read_by_count": 3
+            }
+        }

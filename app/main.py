@@ -3,7 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import auth, users, jobs, posts
+from app.routers import auth, users, jobs, posts, rooms
+from app.services.room_service import create_room_indexes
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -24,6 +25,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     await connect_to_mongo()
+    await create_room_indexes()
     print(f"{settings.APP_NAME} v{settings.VERSION} started successfully!")
 
 @app.on_event("shutdown")
@@ -35,6 +37,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
 app.include_router(posts.router, prefix="/api")
+app.include_router(rooms.router, prefix="/api")
 
 @app.get("/")
 async def root():
