@@ -28,3 +28,7 @@ async def get_jobs_collection():
 async def get_posts_collection():
     database = await get_database()
     return database["posts"]
+
+async def get_rooms_collection():
+    database = await get_database()
+    return database["rooms"]
