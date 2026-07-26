@@ -1,10 +1,3 @@
-"""
-utils/ws_manager.py
-
-Manages all active WebSocket connections, grouped by room_id.
-Handles broadcast, targeted messages, and connection lifecycle.
-"""
-
 from fastapi import WebSocket
 from typing import Dict, List
 import json

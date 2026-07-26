@@ -74,6 +74,7 @@ class UserResponse(BaseModel):
     github_url: Optional[str] = None
     skills: List[str]
     connections: int
+    user_connections: List[str] = []
     joined_date: datetime
     
     class Config:
@@ -96,6 +97,43 @@ class UserResponse(BaseModel):
                 "joined_date": "2021-08-15T10:30:00"
             }
         }
+
+class SuggestedUser(BaseModel):
+    id: str
+    name: str
+    registration_number: str
+    department: str
+    profile_picture: str
+    is_alumni: bool
+    year_of_study: Optional[str]
+    skills: List[str]
+    mutual_connections: int
+    match_score: int
+    match_reasons: List[str]
+ 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "507f1f77bcf86cd799439011",
+                "name": "Priya Patel",
+                "registration_number": "2020UEC5678",
+                "department": "Computer Science & Engineering",
+                "profile_picture": "https://example.com/pic.jpg",
+                "is_alumni": False,
+                "year_of_study": "3rd Year",
+                "skills": ["Python", "React", "Machine Learning"],
+                "mutual_connections": 3,
+                "match_score": 70,
+                "match_reasons": [
+                    "Same department: Computer Science & Engineering",
+                    "3 shared skills: Python, React, Machine Learning"
+                ]
+            }
+        }
+
+class SuggestionsResponse(BaseModel):
+    suggestions: List[SuggestedUser]
+    total: int
 
 class JobCreate(BaseModel):
     title: str
@@ -238,6 +276,7 @@ class PostInDB(BaseModel):
         populate_by_name = True
 
 class AuthorInfo(BaseModel):
+    id: str
     name: str
     registration_number: str
     department: str

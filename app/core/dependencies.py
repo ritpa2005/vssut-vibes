@@ -1,10 +1,10 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from app.utils.security import decode_token
-from app.database import get_users_collection
+from app.core.security import decode_token
+from app.db.database import get_users_collection
 from bson import ObjectId
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login/json")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     credentials_exception = HTTPException(

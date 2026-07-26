@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
-from app.database import connect_to_mongo, close_mongo_connection
+from app.core.config import settings
+from app.db.database import connect_to_mongo, close_mongo_connection
 from app.routers import auth, users, jobs, posts, rooms
 from app.services.room_service import create_room_indexes
 

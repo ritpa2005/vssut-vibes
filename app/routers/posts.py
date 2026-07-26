@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
-from app.models import PostCreate, PostUpdate, CommentCreate, PostResponse, CommentResponse, AuthorInfo
-from app.utils.dependencies import get_current_active_user
-from app.database import get_posts_collection
+from app.models.models import PostCreate, PostUpdate, CommentCreate, PostResponse, CommentResponse, AuthorInfo
+from app.core.dependencies import get_current_active_user
+from app.db.database import get_posts_collection
+from app.services.moderation import moderate_content
 from typing import List
 from datetime import datetime
 from bson import ObjectId
@@ -31,7 +32,6 @@ async def create_post(
     image: UploadFile = File(None),
     current_user: dict = Depends(get_current_active_user)
 ):
-    posts = await get_posts_collection()
     
     image_url = None
     if image:
@@ -41,6 +41,22 @@ async def create_post(
             f.write(file_bytes)
         image_url = f"/media/posts/{file_name}"
 
+    moderation = await moderate_content(
+        text=content,
+        image_url=image_url
+    )
+ 
+    if moderation.flagged:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "Your post was not published because it violates our community guidelines.",
+                "reason":   moderation.reason,
+                "category": moderation.category
+            }
+        )
+
+    posts = await get_posts_collection()
     
     post_dict = {
         "author_id": current_user["_id"],
@@ -61,6 +77,7 @@ async def create_post(
     return PostResponse(
         id=str(result.inserted_id),
         author=AuthorInfo(
+            id=post_dict["author_id"],
             name=post_dict["author_name"],
             registration_number=post_dict["author_registration_number"],
             department=post_dict["author_department"],
@@ -89,6 +106,7 @@ async def get_posts(
         PostResponse(
             id=str(post["_id"]),
             author=AuthorInfo(
+                id=post["author_id"],
                 name=post["author_name"],
                 registration_number=post["author_registration_number"],
                 department=post["author_department"],
@@ -128,6 +146,7 @@ async def get_post_by_id(
     return PostResponse(
         id=str(post["_id"]),
         author=AuthorInfo(
+            id=post["author_id"],
             name=post["author_name"],
             registration_number=post["author_registration_number"],
             department=post["author_department"],
@@ -299,6 +318,7 @@ async def update_post(
     return PostResponse(
         id=str(post["_id"]),
         author=AuthorInfo(
+            id=post["author_id"],
             name=post["author_name"],
             registration_number=post["author_registration_number"],
             department=post["author_department"],
@@ -362,6 +382,7 @@ async def get_user_posts(
         PostResponse(
             id=str(post["_id"]),
             author=AuthorInfo(
+                id=post["author_id"],
                 name=post["author_name"],
                 registration_number=post["author_registration_number"],
                 department=post["author_department"],

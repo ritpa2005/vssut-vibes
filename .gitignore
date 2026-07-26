@@ -6,7 +6,12 @@ __pycache__/
 
 *.pyc
 
-datasets/
-English_profanity_words.csv
+tests/
 
-HateSpeechDataset.csv
+conftest.py
+
+pytest.ini
+
+.pytest_cache/
+
+media/
