@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from fastapi import UploadFile
 
@@ -9,31 +8,7 @@ from app.repositories.auth_repo import (
     find_by_email_or_registration,
     create_user
 )
-
-
-# ── Profile picture ───────────────────────────────────────────────────────────
-
-async def save_profile_picture(profile_picture: UploadFile | None) -> str:
-    """
-    Save uploaded profile picture to disk and return its URL.
-    Falls back to a default avatar if no file is provided.
-    """
-    default = "https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400"
-
-    if not profile_picture:
-        return default
-
-    os.makedirs("media/profile_pics", exist_ok=True)
-    file_name = f"user_{datetime.utcnow().timestamp()}.jpg"
-    file_path = f"media/profile_pics/{file_name}"
-
-    with open(file_path, "wb") as f:
-        f.write(await profile_picture.read())
-
-    return f"http://127.0.0.1:8000/media/profile_pics/{file_name}"
-
-
-# ── Register ──────────────────────────────────────────────────────────────────
+from app.services.cloudinary_service import upload_profile_picture
 
 async def register_user(
     name: str,
@@ -59,7 +34,7 @@ async def register_user(
             "User with this email or registration number already exists"
         )
 
-    profile_pic_url = await save_profile_picture(profile_picture)
+    profile_pic_url = await upload_profile_picture(profile_picture)
     skills_list     = [s.strip() for s in skills_raw.split(",") if s.strip()]
 
     user_dict = {
@@ -105,9 +80,6 @@ async def register_user(
             "joined_date":         user_dict["created_at"],
         }
     }
-
-
-# ── Login ─────────────────────────────────────────────────────────────────────
 
 async def login_user(email: str, password: str) -> dict:
     """

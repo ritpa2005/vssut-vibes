@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from typing import Optional
 from bson.errors import InvalidId
@@ -12,22 +11,7 @@ from app.core.exceptions import (
 )
 from app.repositories import job_repo
 from app.schemas.job import JobResponse, JobUpdate, job_to_response
-
-
-async def save_logo(logo: UploadFile | None) -> str:
-    default = "https://images.pexels.com/photos/270637/pexels-photo-270637.jpeg?auto=compress&cs=tinysrgb&w=400"
-
-    if not logo:
-        return default
-
-    os.makedirs("media/jobs", exist_ok=True)
-    file_name = f"job_{datetime.utcnow().timestamp()}.jpg"
-    file_path = f"media/jobs/{file_name}"
-
-    with open(file_path, "wb") as f:
-        f.write(await logo.read())
-
-    return f"http://127.0.0.1:8000/media/jobs/{file_name}"
+from app.services.cloudinary_service import upload_job_logo
 
 
 async def create(
@@ -42,7 +26,7 @@ async def create(
     logo:         UploadFile | None,
     current_user: dict
 ) -> JobResponse:
-    logo_url = await save_logo(logo)
+    logo_url = await upload_job_logo(logo)
 
     job_dict = {
         "title":          title,
@@ -66,7 +50,6 @@ async def create(
     job_dict["_id"] = inserted_id
     return job_to_response(job_dict)
 
-
 async def get_all(
     job_type:  Optional[str],
     location:  Optional[str],
@@ -77,7 +60,6 @@ async def get_all(
 ) -> list[JobResponse]:
     jobs = await job_repo.find_many(job_type, location, company, search, skip, limit)
     return [job_to_response(j) for j in jobs]
-
 
 async def get_by_id(job_id: str) -> JobResponse:
     try:
@@ -92,7 +74,6 @@ async def get_by_id(job_id: str) -> JobResponse:
     job["views"] = job.get("views", 0) + 1
 
     return job_to_response(job)
-
 
 async def update(
     job_id:      str,
@@ -115,7 +96,6 @@ async def update(
 
     updated = await job_repo.update_by_id(job_id, update_data)
     return job_to_response(updated)
-
 
 async def delete(job_id: str, current_user: dict) -> dict:
     try:

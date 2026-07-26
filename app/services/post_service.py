@@ -1,6 +1,4 @@
-import os
 from datetime import datetime
-from typing import Optional
 from bson.errors import InvalidId
 from fastapi import UploadFile
 
@@ -16,34 +14,16 @@ from app.schemas.post import (
     post_to_response, comment_to_response
 )
 from app.services.moderation_service import moderate_content
+from app.services.cloudinary_service import upload_post_image
 
-
-# ── Image upload ──────────────────────────────────────────────────────────────
-
-async def save_post_image(image: UploadFile | None) -> str | None:
-    if not image:
-        return None
-
-    os.makedirs("media/posts", exist_ok=True)
-    file_name = f"post_{datetime.utcnow().timestamp()}.jpg"
-    file_path = f"media/posts/{file_name}"
-
-    with open(file_path, "wb") as f:
-        f.write(await image.read())
-
-    return f"/media/posts/{file_name}"
-
-
-# ── CRUD ──────────────────────────────────────────────────────────────────────
 
 async def create(
     content:      str,
     image:        UploadFile | None,
     current_user: dict
 ) -> PostResponse:
-    image_url = await save_post_image(image)
+    image_url = await upload_post_image(image)
 
-    # Moderation check — blocks save if content is flagged
     mod = await moderate_content(text=content, image_url=image_url)
     if mod.flagged:
         raise ModerationException(reason=mod.reason, category=mod.category)
@@ -67,15 +47,9 @@ async def create(
 
     return post_to_response(post_dict, current_user["_id"])
 
-
-async def get_feed(
-    current_user: dict,
-    skip:         int,
-    limit:        int
-) -> list[PostResponse]:
+async def get_feed(current_user: dict, skip: int, limit: int) -> list[PostResponse]:
     posts = await post_repo.find_feed(skip, limit)
     return [post_to_response(p, current_user["_id"]) for p in posts]
-
 
 async def get_by_id(post_id: str, current_user: dict) -> PostResponse:
     try:
@@ -88,7 +62,6 @@ async def get_by_id(post_id: str, current_user: dict) -> PostResponse:
 
     return post_to_response(post, current_user["_id"])
 
-
 async def get_by_author(
     author_id:    str,
     current_user: dict,
@@ -98,12 +71,7 @@ async def get_by_author(
     posts = await post_repo.find_by_author(author_id, skip, limit)
     return [post_to_response(p, current_user["_id"]) for p in posts]
 
-
-async def update(
-    post_id:      str,
-    update_data:  dict,
-    current_user: dict
-) -> PostResponse:
+async def update(post_id: str, update_data: dict, current_user: dict) -> PostResponse:
     try:
         post = await post_repo.find_by_id(post_id)
     except (InvalidId, Exception):
@@ -121,7 +89,6 @@ async def update(
     updated = await post_repo.update_by_id(post_id, update_data)
     return post_to_response(updated, current_user["_id"])
 
-
 async def delete(post_id: str, current_user: dict) -> dict:
     try:
         post = await post_repo.find_by_id(post_id)
@@ -137,8 +104,6 @@ async def delete(post_id: str, current_user: dict) -> dict:
     await post_repo.delete_by_id(post_id)
     return {"message": "Post deleted successfully"}
 
-
-# ── Likes ─────────────────────────────────────────────────────────────────────
 
 async def toggle_like(post_id: str, current_user: dict) -> dict:
     try:
@@ -160,8 +125,6 @@ async def toggle_like(post_id: str, current_user: dict) -> dict:
         await post_repo.push_like(post_id, user_id)
         return {"message": "Post liked",   "likes_count": len(likes) + 1}
 
-
-# ── Comments ──────────────────────────────────────────────────────────────────
 
 async def add_comment(
     post_id:      str,
@@ -186,7 +149,6 @@ async def add_comment(
 
     await post_repo.push_comment(post_id, comment)
     return comment_to_response(comment)
-
 
 async def get_comments(post_id: str) -> list[CommentResponse]:
     try:

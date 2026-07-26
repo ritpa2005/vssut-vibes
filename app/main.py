@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.database import connect_to_mongo, close_mongo_connection
 from app.routers import auth, users, jobs, posts, rooms
-from app.services.room_service import create_room_indexes
+from app.db.indexes import create_all_indexes
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -25,7 +25,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     await connect_to_mongo()
-    await create_room_indexes()
+    await create_all_indexes()
     print(f"{settings.APP_NAME} v{settings.VERSION} started successfully!")
 
 @app.on_event("shutdown")
