@@ -1,5 +1,6 @@
 from typing import Optional
 from bson.errors import InvalidId
+from fastapi import UploadFile
 
 from app.core.exceptions import (
     NotFoundException,
@@ -8,13 +9,12 @@ from app.core.exceptions import (
 )
 from app.repositories import user_repo
 from app.schemas.user import UserResponse, UserUpdate, user_to_response
+from app.services import suggestion_service
+from app.services.cloudinary_service import upload_profile_picture
 
-
-# ── Profile ───────────────────────────────────────────────────────────────────
 
 async def get_me(current_user: dict) -> UserResponse:
     return user_to_response(current_user)
-
 
 async def update_me(current_user: dict, user_update: UserUpdate) -> UserResponse:
     update_data = user_update.dict(exclude_unset=True)
@@ -25,6 +25,10 @@ async def update_me(current_user: dict, user_update: UserUpdate) -> UserResponse
     updated = await user_repo.update_by_id(current_user["_id"], update_data)
     return user_to_response(updated)
 
+async def update_profile_picture(current_user: dict, file: UploadFile) -> UserResponse:
+    picture_url = await upload_profile_picture(file)
+    updated     = await user_repo.update_by_id(current_user["_id"], {"profile_picture": picture_url})
+    return user_to_response(updated)
 
 async def get_by_id(user_id: str) -> UserResponse:
     try:
@@ -37,7 +41,6 @@ async def get_by_id(user_id: str) -> UserResponse:
 
     return user_to_response(user)
 
-
 async def search(
     query: Optional[str],
     department: Optional[str],
@@ -47,8 +50,6 @@ async def search(
     users = await user_repo.find_many(query, department, skip, limit)
     return [user_to_response(u) for u in users]
 
-
-# ── Connections ───────────────────────────────────────────────────────────────
 
 async def connect(current_user: dict, user_id: str) -> dict:
     if user_id == current_user["_id"]:
@@ -70,10 +71,9 @@ async def connect(current_user: dict, user_id: str) -> dict:
 
     return {"message": "Connected successfully"}
 
-
 async def disconnect(current_user: dict, user_id: str) -> dict:
     try:
-        # validate ID format even if we don't need the document
+        # validating ID format
         from bson import ObjectId
         ObjectId(user_id)
     except InvalidId:
@@ -86,3 +86,13 @@ async def disconnect(current_user: dict, user_id: str) -> dict:
     await user_repo.pull_connection(user_id, current_user["_id"])
 
     return {"message": "Disconnected successfully"}
+
+
+async def get_suggestions(current_user: dict, limit: int):
+    return await suggestion_service.get_suggestions(current_user, limit)
+ 
+async def get_suggestions_by_department(current_user: dict, limit: int):
+    return await suggestion_service.get_suggestions_by_department(current_user, limit)
+ 
+async def get_suggestions_by_skills(current_user: dict, limit: int):
+    return await suggestion_service.get_suggestions_by_skills(current_user, limit)
