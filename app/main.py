@@ -1,18 +1,15 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.database import connect_to_mongo, close_mongo_connection
-from app.routers import auth, users, jobs, posts, rooms
 from app.db.indexes import create_all_indexes
+from app.routers import auth, users, jobs, posts, rooms
 
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
-    description="VSSUT Vibes API for connecting students and alumni.",
+    description="VSSUT Vibes API — connecting students and alumni of VSSUT Burla.",
 )
-
-app.mount("/media", StaticFiles(directory="media"), name="media")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +43,7 @@ async def root():
         "version": settings.VERSION,
         "status": "running",
         "docs": "/docs",
+        "base_url": settings.BASE_URL,
     }
 
 if __name__ == "__main__":
