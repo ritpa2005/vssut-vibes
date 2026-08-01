@@ -145,9 +145,12 @@ async def get_room_messages(
 # WebSocket
 # Connect: ws://host/api/rooms/{room_id}/ws?token=<jwt>
 #
+# Client MUST send a ping every 30 seconds to stay connected.
+# Server closes the connection after 5 minutes of silence (code 4008).
+
 # Client → Server frames:
 #   { "type": "message", "content": "...", "attachment": null }
-#   { "type": "ping" }
+#   { "type": "ping" }        - keepalive
 #
 # Server → Client frames:
 #   { "type": "message",  ...MessageResponse }
@@ -156,7 +159,7 @@ async def get_room_messages(
 #   { "type": "kick",     "user_id" }
 #   { "type": "presence", "online_users": [...] }
 #   { "type": "room_closed" }
-#   { "type": "pong" }
+#   { "type": "pong" }         - ping acknowledged
 #   { "type": "error",    "detail": "..." }
 # ══════════════════════════════════════════════════════════════
 
@@ -166,11 +169,13 @@ async def room_websocket(
     room_id:   str,
     token:     str = Query(...)
 ):
+    # Auth
     user = await get_ws_user(token)
     if not user:
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
+    # Room validation
     try:
         room = await room_service.get_by_id(room_id)
     except Exception:
@@ -185,6 +190,7 @@ async def room_websocket(
         await websocket.close(code=4000, reason="Room is closed")
         return
 
+    # connect() also starts the watchdog task for this connection
     await manager.connect(websocket, room_id, user["_id"], user["name"])
 
     await manager.broadcast(room_id, {
@@ -198,6 +204,7 @@ async def room_websocket(
         "online_users": manager.get_online_users(room_id),
     })
 
+    # Message loop
     try:
         while True:
             raw = await websocket.receive_text()
@@ -210,10 +217,14 @@ async def room_websocket(
 
             msg_type = data.get("type")
 
+            # Ping / keepalive
             if msg_type == "ping":
+                # Reset the 5-minute watchdog timer for this connection
+                manager.update_ping(websocket, room_id)
                 await websocket.send_text(json.dumps({"type": "pong"}))
                 continue
 
+            # Chat message
             if msg_type == "message":
                 content    = data.get("content", "").strip()
                 attachment = data.get("attachment")
@@ -222,6 +233,7 @@ async def room_websocket(
                     await websocket.send_text(json.dumps({"type": "error", "detail": "Message cannot be empty"}))
                     continue
 
+                # Re-check room is still active
                 room = await room_service.get_by_id(room_id)
                 if not room["is_active"]:
                     await websocket.send_text(json.dumps({"type": "room_closed"}))
@@ -231,6 +243,7 @@ async def room_websocket(
                 await manager.broadcast(room_id, {"type": "message", **saved_msg})
                 continue
 
+            # Unknown frame
             await websocket.send_text(json.dumps({
                 "type":   "error",
                 "detail": f"Unknown message type: {msg_type}"
@@ -240,6 +253,7 @@ async def room_websocket(
         pass
 
     finally:
+        # disconnect() also cancels the watchdog task
         manager.disconnect(websocket, room_id)
         await manager.broadcast(room_id, {
             "type":      "leave",
