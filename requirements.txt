@@ -23,3 +23,5 @@ fastapi-cors==0.0.6
 httpx==0.25.2
 
 cloudinary==1.36.0
+
+slowapi==0.1.9

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, status
 from typing import List
-
+from app.core.limiter import limiter
 from app.schemas.post import PostUpdate, PostResponse, CommentCreate, CommentResponse
 from app.core.dependencies import get_current_active_user
 from app.services import post_service
@@ -17,7 +17,9 @@ async def get_posts(
     return await post_service.get_feed(current_user, skip, limit)
 
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_post(
+    request:      Request,
     content:      str        = Form(...),
     image:        UploadFile = File(None),
     current_user: dict       = Depends(get_current_active_user)
@@ -43,7 +45,9 @@ async def get_post_by_id(
     return await post_service.get_by_id(post_id, current_user)
 
 @router.put("/{post_id}", response_model=PostResponse)
+@limiter.limit("15/minute")
 async def update_post(
+    request:      Request,
     post_id:      str,
     post_update:  PostUpdate,
     current_user: dict = Depends(get_current_active_user)
@@ -63,14 +67,18 @@ async def delete_post(
 
 
 @router.post("/{post_id}/like")
+@limiter.limit("30/minute")
 async def like_post(
+    request:      Request,
     post_id:      str,
     current_user: dict = Depends(get_current_active_user)
 ):
     return await post_service.toggle_like(post_id, current_user)
 
 @router.post("/{post_id}/comment", response_model=CommentResponse)
+@limiter.limit("15/minute")
 async def add_comment(
+    request:      Request,
     post_id:      str,
     comment_data: CommentCreate,
     current_user: dict = Depends(get_current_active_user)

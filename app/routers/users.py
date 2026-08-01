@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from typing import List, Optional
-
+from app.core.limiter import limiter
 from app.schemas.user import UserUpdate, UserResponse
 from app.schemas.suggestion import SuggestionsResponse
 from app.core.dependencies import get_current_active_user
@@ -23,7 +23,9 @@ async def update_current_user(
     return await user_service.update_me(current_user, user_update)
 
 @router.patch("/me/picture", response_model=UserResponse)
+@limiter.limit("5/minute")
 async def update_profile_picture(
+    request:      Request,
     file:         UploadFile = File(...),
     current_user: dict       = Depends(get_current_active_user)
 ):
@@ -31,7 +33,9 @@ async def update_profile_picture(
 
 
 @router.get("/suggestions", response_model=SuggestionsResponse)
+@limiter.limit("10/minute")
 async def suggest_connections(
+    request:      Request,
     limit:        int  = Query(10, ge=1, le=50),
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -39,7 +43,9 @@ async def suggest_connections(
     return SuggestionsResponse(suggestions=results, total=len(results))
 
 @router.get("/suggestions/department", response_model=SuggestionsResponse)
+@limiter.limit("10/minute")
 async def suggest_by_department(
+    request:      Request,
     limit:        int  = Query(10, ge=1, le=50),
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -47,7 +53,9 @@ async def suggest_by_department(
     return SuggestionsResponse(suggestions=results, total=len(results))
 
 @router.get("/suggestions/skills", response_model=SuggestionsResponse)
+@limiter.limit("10/minute")
 async def suggest_by_skills(
+    request:      Request,
     limit:        int  = Query(10, ge=1, le=50),
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -66,7 +74,9 @@ async def search_users(
 
 
 @router.post("/connect/{user_id}")
+@limiter.limit("20/minute")
 async def connect_with_user(
+    request:      Request,
     user_id:      str,
     current_user: dict = Depends(get_current_active_user)
 ):

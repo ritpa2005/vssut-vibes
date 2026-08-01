@@ -1,4 +1,5 @@
 from fastapi import APIRouter, status, Form, File, UploadFile
+from app.core.limiter import limiter
 from app.schemas.auth import Token, LoginRequest
 from app.services.auth_service import register_user, login_user
 
@@ -6,6 +7,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def register(
     name:                str        = Form(...),
     email:               str        = Form(...),
@@ -37,6 +39,7 @@ async def register(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("10/minute")
 async def login(login_data: LoginRequest):
     return await login_user(
         email=login_data.email,

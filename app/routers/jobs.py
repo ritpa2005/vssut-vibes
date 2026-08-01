@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, status
 from typing import List, Optional
-
+from app.core.limiter import limiter
 from app.schemas.job import JobUpdate, JobResponse
 from app.core.dependencies import get_current_active_user
 from app.services import job_service
@@ -9,7 +9,9 @@ router = APIRouter(prefix="/jobs", tags=["Jobs & Internships"])
 
 
 @router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def create_job(
+    request:      Request,
     title:        str        = Form(...),
     company:      str        = Form(...),
     location:     str        = Form(""),
@@ -51,7 +53,9 @@ async def get_job_by_id(job_id: str):
     return await job_service.get_by_id(job_id)
 
 @router.post("/{job_id}/apply")
+@limiter.limit("10/minute")
 async def apply_for_job(
+    request:      Request,
     job_id:       str,
     current_user: dict = Depends(get_current_active_user)
 ):
