@@ -1,7 +1,6 @@
 from bson import ObjectId
 from bson.errors import InvalidId
 from typing import Optional
-from datetime import datetime
 
 from app.db.database import get_jobs_collection
 
@@ -12,12 +11,10 @@ def parse_job_id(job_id: str) -> ObjectId:
     except InvalidId:
         raise InvalidId(f"Invalid job ID format: {job_id}")
 
-
 async def insert(job_dict: dict) -> str:
     col    = await get_jobs_collection()
     result = await col.insert_one(job_dict)
     return str(result.inserted_id)
-
 
 async def find_by_id(job_id: str) -> dict | None:
     col = await get_jobs_collection()
@@ -26,7 +23,6 @@ async def find_by_id(job_id: str) -> dict | None:
     if job:
         job["_id"] = str(job["_id"])
     return job
-
 
 async def find_many(
     job_type:  Optional[str],

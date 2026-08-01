@@ -1,8 +1,3 @@
-# app/repositories/user_repo.py
-#
-# Responsibility: raw MongoDB queries only.
-# No business logic, no HTTP concerns, no schema knowledge.
-
 from bson import ObjectId
 from datetime import datetime
 from typing import Optional
@@ -16,7 +11,6 @@ async def find_by_id(user_id: str) -> dict | None:
     if user:
         user["_id"] = str(user["_id"])
     return user
-
 
 async def find_many(
     query:      Optional[str],
@@ -41,7 +35,6 @@ async def find_many(
         u["_id"] = str(u["_id"])
     return users
 
-
 async def update_by_id(user_id: str, update_data: dict) -> dict:
     col = await get_users_collection()
     oid = ObjectId(user_id)
@@ -58,7 +51,6 @@ async def push_connection(user_id: str, connection_id: str) -> None:
         {"_id": ObjectId(user_id)},
         {"$push": {"connections": connection_id}}
     )
-
 
 async def pull_connection(user_id: str, connection_id: str) -> None:
     col = await get_users_collection()

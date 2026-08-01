@@ -1,23 +1,35 @@
-# app/schemas/post.py
-
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+class PostInDB(BaseModel):
+    id:          str
+    author_id:   str
+    author_name: str
+    author_registration_number: str
+    author_department: str
+    author_profile_picture: str
+    content:     str
+    image:       Optional[str]      = None
+    likes:       List[str]          = []  # user_ids
+    comments:    List[dict]         = []
+    created_at:  datetime
+
+    class Config:
+        populate_by_name = True
 
 class PostCreate(BaseModel):
     content: str
 
-
 class PostUpdate(BaseModel):
     content: Optional[str] = None
-
 
 class CommentCreate(BaseModel):
     content: str
 
 
 class AuthorInfo(BaseModel):
+    id:                  str
     name:                str
     registration_number: str
     department:          str
@@ -42,8 +54,6 @@ class CommentResponse(BaseModel):
     created_at:     datetime
 
 
-# ── Mapping helpers ───────────────────────────────────────────────────────────
-
 def post_to_response(post: dict, current_user_id: str) -> PostResponse:
     """
     Single place that maps a raw MongoDB post document → PostResponse.
@@ -54,6 +64,7 @@ def post_to_response(post: dict, current_user_id: str) -> PostResponse:
     return PostResponse(
         id=str(post["_id"]),
         author=AuthorInfo(
+            id=post.get("author_id", ""),
             name=post["author_name"],
             registration_number=post["author_registration_number"],
             department=post["author_department"],

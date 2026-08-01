@@ -1,11 +1,5 @@
-# app/repositories/post_repo.py
-#
-# Responsibility: raw MongoDB queries only.
-# No business logic, no HTTP concerns, no schema knowledge.
-
 from bson import ObjectId
 from datetime import datetime
-from typing import Optional
 
 from app.db.database import get_posts_collection
 
@@ -15,7 +9,6 @@ async def insert(post_dict: dict) -> str:
     col    = await get_posts_collection()
     result = await col.insert_one(post_dict)
     return str(result.inserted_id)
-
 
 async def find_by_id(post_id: str) -> dict | None:
     col  = await get_posts_collection()
@@ -52,7 +45,6 @@ async def update_by_id(post_id: str, update_data: dict) -> dict:
     post["_id"] = str(post["_id"])
     return post
 
-
 async def delete_by_id(post_id: str) -> None:
     col = await get_posts_collection()
     await col.delete_one({"_id": ObjectId(post_id)})
@@ -65,14 +57,12 @@ async def push_like(post_id: str, user_id: str) -> None:
         {"$push": {"likes": user_id}}
     )
 
-
 async def pull_like(post_id: str, user_id: str) -> None:
     col = await get_posts_collection()
     await col.update_one(
         {"_id": ObjectId(post_id)},
         {"$pull": {"likes": user_id}}
     )
-
 
 async def push_comment(post_id: str, comment: dict) -> None:
     col = await get_posts_collection()

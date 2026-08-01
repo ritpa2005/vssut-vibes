@@ -1,8 +1,3 @@
-# app/repositories/suggestion_repo.py
-#
-# Responsibility: raw MongoDB queries for suggestions.
-# Returns plain dicts — no scoring, no business logic.
-
 from bson import ObjectId
 from app.db.database import get_users_collection, get_rooms_collection
 

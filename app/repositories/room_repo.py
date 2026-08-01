@@ -1,6 +1,5 @@
 import secrets
 from datetime import datetime
-from typing import Optional
 from bson import ObjectId
 from bson.errors import InvalidId
 
@@ -23,24 +22,20 @@ async def insert_room(room_doc: dict) -> str:
     result = await col.insert_one(room_doc)
     return str(result.inserted_id)
 
-
 async def find_by_id(room_id: str) -> dict | None:
     col  = await get_rooms_collection()
     oid  = parse_room_id(room_id)
     room = await col.find_one({"_id": oid})
     return room
 
-
 async def find_by_invite_code(invite_code: str) -> dict | None:
     col = await get_rooms_collection()
     return await col.find_one({"invite_code": invite_code})
-
 
 async def find_by_member(user_id: str) -> list[dict]:
     col    = await get_rooms_collection()
     cursor = col.find({"members": user_id}).sort("updated_at", -1)
     return await cursor.to_list(length=100)
-
 
 async def update_by_id(room_id: str, update_data: dict) -> dict:
     col = await get_rooms_collection()
@@ -48,7 +43,6 @@ async def update_by_id(room_id: str, update_data: dict) -> dict:
     update_data["updated_at"] = datetime.utcnow()
     await col.update_one({"_id": oid}, {"$set": update_data})
     return await col.find_one({"_id": oid})
-
 
 async def set_inactive(room_id: str) -> None:
     col = await get_rooms_collection()
@@ -68,7 +62,6 @@ async def push_member(room_id: ObjectId, user_id: str) -> None:
             "$set":  {"updated_at": datetime.utcnow()}
         }
     )
-
 
 async def pull_member(room_id: str, user_id: str) -> None:
     col = await get_rooms_collection()
@@ -98,7 +91,6 @@ async def insert_message(room_id: str, message: dict) -> dict:
     )
     return result
 
-
 async def fetch_messages(room_id: str, skip: int, limit: int) -> list[dict]:
     """Fetch a page of messages using MongoDB $slice."""
     col  = await get_rooms_collection()
@@ -109,7 +101,6 @@ async def fetch_messages(room_id: str, skip: int, limit: int) -> list[dict]:
     )
     return room.get("messages", []) if room else []
 
-
 async def add_read_by(room_id: str, user_id: str) -> None:
     """Mark all messages in a room as read by user_id."""
     col = await get_rooms_collection()
@@ -118,12 +109,3 @@ async def add_read_by(room_id: str, user_id: str) -> None:
         {"_id": oid},
         {"$addToSet": {"messages.$[].read_by": user_id}}
     )
-
-
-async def create_indexes() -> None:
-    col = await get_rooms_collection()
-    await col.create_index("invite_code", unique=True)
-    await col.create_index("mentor_id")
-    await col.create_index("members")
-    await col.create_index("updated_at")
-    print("Room indexes created.")

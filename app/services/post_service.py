@@ -17,11 +17,7 @@ from app.services.moderation_service import moderate_content
 from app.services.cloudinary_service import upload_post_image
 
 
-async def create(
-    content:      str,
-    image:        UploadFile | None,
-    current_user: dict
-) -> PostResponse:
+async def create(content: str, image: UploadFile | None, current_user: dict) -> PostResponse:
     image_url = await upload_post_image(image)
 
     mod = await moderate_content(text=content, image_url=image_url)
@@ -62,12 +58,7 @@ async def get_by_id(post_id: str, current_user: dict) -> PostResponse:
 
     return post_to_response(post, current_user["_id"])
 
-async def get_by_author(
-    author_id:    str,
-    current_user: dict,
-    skip:         int,
-    limit:        int
-) -> list[PostResponse]:
+async def get_by_author(author_id: str, current_user: dict, skip: int, limit: int) -> list[PostResponse]:
     posts = await post_repo.find_by_author(author_id, skip, limit)
     return [post_to_response(p, current_user["_id"]) for p in posts]
 

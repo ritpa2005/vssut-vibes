@@ -3,6 +3,27 @@ from typing import Optional, List
 from datetime import datetime
 
 
+class JobInDB(BaseModel):
+    id:             str
+    title:          str
+    company:        str
+    location:       str
+    type:           str
+    salary:         Optional[str]      = None
+    description:    str
+    requirements:   str
+    posted_by:      str
+    posted_by_name: str
+    logo:           str
+    posted_date:    datetime
+    deadline:       Optional[datetime] = None
+    is_active:      bool               = True
+    applicants:     List[str]          = []
+    views:          int                = 0
+ 
+    class Config:
+        populate_by_name = True
+
 class JobUpdate(BaseModel):
     title:        Optional[str]      = None
     company:      Optional[str]      = None
@@ -14,7 +35,6 @@ class JobUpdate(BaseModel):
     logo:         Optional[str]      = None
     deadline:     Optional[datetime] = None
     is_active:    Optional[bool]     = None
-
 
 class JobResponse(BaseModel):
     id:              str
@@ -32,27 +52,6 @@ class JobResponse(BaseModel):
     is_active:       bool
     applicants_count: int
     views:           int
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id":              "507f1f77bcf86cd799439011",
-                "title":           "Software Development Intern",
-                "company":         "Google",
-                "location":        "Bangalore, Karnataka",
-                "type":            "Internship",
-                "salary":          "₹50,000/month",
-                "description":     "Build great things.",
-                "requirements":    "Python, FastAPI",
-                "posted_by_name":  "Amit Kumar",
-                "logo":            "https://example.com/logo.jpg",
-                "posted_date":     "2 days ago",
-                "deadline":        None,
-                "is_active":       True,
-                "applicants_count": 12,
-                "views":           234
-            }
-        }
 
 
 def job_to_response(job: dict) -> JobResponse:

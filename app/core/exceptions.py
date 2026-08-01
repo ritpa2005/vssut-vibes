@@ -1,9 +1,5 @@
-# app/core/exceptions.py
-
 from fastapi import HTTPException, status
 
-
-# ── 400 Bad Request ───────────────────────────────────────────
 class BadRequestException(HTTPException):
     def __init__(self, detail: str):
         super().__init__(
@@ -11,8 +7,6 @@ class BadRequestException(HTTPException):
             detail=detail
         )
 
-
-# ── 401 Unauthorized ──────────────────────────────────────────
 class UnauthorizedException(HTTPException):
     def __init__(self, detail: str = "Could not validate credentials"):
         super().__init__(
@@ -21,8 +15,6 @@ class UnauthorizedException(HTTPException):
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-
-# ── 403 Forbidden ─────────────────────────────────────────────
 class ForbiddenException(HTTPException):
     def __init__(self, detail: str = "You don't have permission to perform this action"):
         super().__init__(
@@ -30,8 +22,6 @@ class ForbiddenException(HTTPException):
             detail=detail
         )
 
-
-# ── 404 Not Found ─────────────────────────────────────────────
 class NotFoundException(HTTPException):
     def __init__(self, entity: str = "Resource"):
         super().__init__(
@@ -39,8 +29,6 @@ class NotFoundException(HTTPException):
             detail=f"{entity} not found"
         )
 
-
-# ── 409 Conflict ──────────────────────────────────────────────
 class AlreadyExistsException(HTTPException):
     def __init__(self, detail: str):
         super().__init__(
@@ -48,8 +36,6 @@ class AlreadyExistsException(HTTPException):
             detail=detail
         )
 
-
-# ── 422 Unprocessable ─────────────────────────────────────────
 class ModerationException(HTTPException):
     def __init__(self, reason: str, category: str):
         super().__init__(
@@ -61,8 +47,6 @@ class ModerationException(HTTPException):
             }
         )
 
-
-# ── 500 Internal ──────────────────────────────────────────────
 class InternalException(HTTPException):
     def __init__(self, detail: str = "Something went wrong. Please try again."):
         super().__init__(

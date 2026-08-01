@@ -17,7 +17,6 @@ class RoomCreate(BaseModel):
             }
         }
 
-
 class RoomUpdate(BaseModel):
     name:        Optional[str]  = None
     topic:       Optional[str]  = None
@@ -40,7 +39,6 @@ class RoomResponse(BaseModel):
     last_message:   Optional[str]
     created_at:     datetime
 
-
 class RoomPreviewResponse(BaseModel):
     id:             str
     name:           str
@@ -51,6 +49,10 @@ class RoomPreviewResponse(BaseModel):
     max_members:    int
     is_active:      bool
 
+
+class MessageCreate(BaseModel):
+    content:    str
+    attachment: Optional[str] = None
 
 class MessageResponse(BaseModel):
     id:             str

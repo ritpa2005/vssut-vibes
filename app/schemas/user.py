@@ -1,9 +1,15 @@
-# app/schemas/user.py
-
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
+
+class UserCreate(BaseModel):
+    name: str
+    registration_number: str
+    email: EmailStr
+    password: str
+    department: str
+    year_of_study: Optional[str] = None
 
 class UserUpdate(BaseModel):
     bio:             Optional[str]       = None
@@ -30,8 +36,8 @@ class UserResponse(BaseModel):
     linkedin_url:        Optional[str]       = None
     github_url:          Optional[str]       = None
     skills:              List[str]
-    user_connections:    List[str]           = []   # raw connection IDs
-    connections:         int                        # count
+    user_connections:    List[str]           = []
+    connections:         int
     joined_date:         datetime
 
 

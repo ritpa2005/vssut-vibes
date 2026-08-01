@@ -46,11 +46,9 @@ async def get_jobs(
 ):
     return await job_service.get_all(job_type, location, company, search, skip, limit)
 
-
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job_by_id(job_id: str):
     return await job_service.get_by_id(job_id)
-
 
 @router.post("/{job_id}/apply")
 async def apply_for_job(
@@ -59,7 +57,6 @@ async def apply_for_job(
 ):
     return await job_service.apply(job_id, current_user)
 
-
 @router.put("/{job_id}", response_model=JobResponse)
 async def update_job(
     job_id:       str,
@@ -67,7 +64,6 @@ async def update_job(
     current_user: dict = Depends(get_current_active_user)
 ):
     return await job_service.update(job_id, job_update, current_user)
-
 
 @router.delete("/{job_id}")
 async def delete_job(

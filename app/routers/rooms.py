@@ -166,13 +166,11 @@ async def room_websocket(
     room_id:   str,
     token:     str = Query(...)
 ):
-    # ── Auth ──────────────────────────────────────────────────
     user = await get_ws_user(token)
     if not user:
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
-    # ── Room validation ───────────────────────────────────────
     try:
         room = await room_service.get_by_id(room_id)
     except Exception:
@@ -187,7 +185,6 @@ async def room_websocket(
         await websocket.close(code=4000, reason="Room is closed")
         return
 
-    # ── Connect + announce presence ───────────────────────────
     await manager.connect(websocket, room_id, user["_id"], user["name"])
 
     await manager.broadcast(room_id, {
@@ -201,7 +198,6 @@ async def room_websocket(
         "online_users": manager.get_online_users(room_id),
     })
 
-    # ── Message loop ──────────────────────────────────────────
     try:
         while True:
             raw = await websocket.receive_text()
@@ -226,7 +222,6 @@ async def room_websocket(
                     await websocket.send_text(json.dumps({"type": "error", "detail": "Message cannot be empty"}))
                     continue
 
-                # Re-check room is still active
                 room = await room_service.get_by_id(room_id)
                 if not room["is_active"]:
                     await websocket.send_text(json.dumps({"type": "room_closed"}))
