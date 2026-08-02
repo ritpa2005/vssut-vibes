@@ -1,6 +1,7 @@
 from typing import Optional
 from bson.errors import InvalidId
 from fastapi import UploadFile
+from app.core.cache import cache, CacheKey
 
 from app.core.exceptions import (
     NotFoundException,
@@ -17,10 +18,13 @@ async def get_me(current_user: dict) -> UserResponse:
     return user_to_response(current_user)
 
 async def update_me(current_user: dict, user_update: UserUpdate) -> UserResponse:
-    update_data = user_update.dict(exclude_unset=True)
+    update_data = user_update.model_dump(exclude_unset=True)
 
     if not update_data:
         return user_to_response(current_user)
+    
+    if "skills" in update_data:
+        await _invalidate_suggestions(current_user["_id"])
 
     updated = await user_repo.update_by_id(current_user["_id"], update_data)
     return user_to_response(updated)
@@ -69,6 +73,9 @@ async def connect(current_user: dict, user_id: str) -> dict:
     await user_repo.push_connection(current_user["_id"], user_id)
     await user_repo.push_connection(user_id, current_user["_id"])
 
+    await _invalidate_suggestions(current_user["_id"])
+    await _invalidate_suggestions(user_id)
+
     return {"message": "Connected successfully"}
 
 async def disconnect(current_user: dict, user_id: str) -> dict:
@@ -96,3 +103,8 @@ async def get_suggestions_by_department(current_user: dict, limit: int):
  
 async def get_suggestions_by_skills(current_user: dict, limit: int):
     return await suggestion_service.get_suggestions_by_skills(current_user, limit)
+
+async def _invalidate_suggestions(user_id: str) -> None:
+    await cache.delete(CacheKey.suggestions(user_id))
+    await cache.delete(CacheKey.suggestions_dept(user_id))
+    await cache.delete(CacheKey.suggestions_skills(user_id))

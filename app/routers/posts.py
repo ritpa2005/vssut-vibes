@@ -54,7 +54,7 @@ async def update_post(
 ):
     return await post_service.update(
         post_id,
-        post_update.dict(exclude_unset=True),
+        post_update.model_dump(exclude_unset=True),
         current_user
     )
 

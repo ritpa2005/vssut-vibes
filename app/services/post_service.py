@@ -1,7 +1,7 @@
 from datetime import datetime
 from bson.errors import InvalidId
 from fastapi import UploadFile
-
+from app.core.cache import cache, CacheKey, CacheTTL
 from app.core.exceptions import (
     NotFoundException,
     BadRequestException,
@@ -41,10 +41,31 @@ async def create(content: str, image: UploadFile | None, current_user: dict) -> 
     inserted_id      = await post_repo.insert(post_dict)
     post_dict["_id"] = inserted_id
 
+    await _invalidate_feed()
+
     return post_to_response(post_dict, current_user["_id"])
 
 async def get_feed(current_user: dict, skip: int, limit: int) -> list[PostResponse]:
+    key    = CacheKey.feed(skip, limit)
+    cached = await cache.get(key)
+
+    if cached is not None:
+        return [
+            post_to_response(
+                {**post, "likes": post["_likes"]},
+                current_user["_id"]
+            )
+            for post in cached
+        ]
+
     posts = await post_repo.find_feed(skip, limit)
+
+    cacheable = [
+        {**p, "_likes": p.get("likes", [])}
+        for p in posts
+    ]
+    await cache.set(key, cacheable, ttl=CacheTTL.FEED)
+
     return [post_to_response(p, current_user["_id"]) for p in posts]
 
 async def get_by_id(post_id: str, current_user: dict) -> PostResponse:
@@ -93,6 +114,7 @@ async def delete(post_id: str, current_user: dict) -> dict:
         raise ForbiddenException("You don't have permission to delete this post")
 
     await post_repo.delete_by_id(post_id)
+    await _invalidate_feed()
     return {"message": "Post deleted successfully"}
 
 
@@ -107,9 +129,8 @@ async def toggle_like(post_id: str, current_user: dict) -> dict:
 
     likes     = post.get("likes", [])
     user_id   = current_user["_id"]
-    already   = user_id in likes
 
-    if already:
+    if user_id in likes:
         await post_repo.pull_like(post_id, user_id)
         return {"message": "Post unliked", "likes_count": len(likes) - 1}
     else:
@@ -151,3 +172,7 @@ async def get_comments(post_id: str) -> list[CommentResponse]:
         raise NotFoundException("Post")
 
     return [comment_to_response(c) for c in post.get("comments", [])]
+
+
+async def _invalidate_feed() -> None:
+    await cache.delete_pattern("feed:")

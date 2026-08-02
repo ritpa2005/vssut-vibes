@@ -1,11 +1,4 @@
-# app/services/suggestion_scorer.py
-#
-# Responsibility: scoring logic only.
-# Pure functions — no DB calls, no HTTP, no FastAPI.
-# Takes raw dicts from the repo and returns scored results.
-# Isolated here so it can be unit tested without any DB or HTTP mocks.
-
-# ── Weights ───────────────────────────────────────────────────────────────────
+# Weights
 W_DEPARTMENT = 30
 W_SKILL      = 10
 W_SKILL_CAP  = 50
@@ -14,8 +7,7 @@ W_ROOM_CAP   = 75
 W_ALUMNI     = 10
 
 
-# ── Room map builder ──────────────────────────────────────────────────────────
-
+# Room map builder
 def build_shared_rooms_map(
     rooms:   list[dict],
     user_id: str
@@ -34,9 +26,7 @@ def build_shared_rooms_map(
             shared.setdefault(mid, set()).add(room["name"])
     return shared
 
-
-# ── Single candidate scorer ───────────────────────────────────────────────────
-
+# Single candidate scorer
 def score_candidate(
     candidate:       dict,
     my_skills:       set[str],
@@ -53,12 +43,12 @@ def score_candidate(
     score         = 0
     match_reasons = []
 
-    # — Department —
+    # Department
     if candidate.get("department") == my_department:
         score += W_DEPARTMENT
         match_reasons.append(f"Same department: {my_department}")
 
-    # — Skills —
+    # Skills
     their_skills  = set(s.lower() for s in candidate.get("skills", []))
     common_skills = my_skills & their_skills
     if common_skills:
@@ -70,7 +60,7 @@ def score_candidate(
             f"{'s' if len(common_skills) > 1 else ''}: {readable}"
         )
 
-    # — Shared rooms —
+    # Shared rooms
     shared_rooms = shared_rooms_map.get(cid, set())
     if shared_rooms:
         room_score = min(len(shared_rooms) * W_ROOM, W_ROOM_CAP)
@@ -81,7 +71,7 @@ def score_candidate(
             f"{'s' if len(shared_rooms) > 1 else ''}: {readable}"
         )
 
-    # — Alumni ↔ student cross-match —
+    # Alumni ↔ student cross-match
     their_is_alumni = candidate.get("is_alumni", False)
     if my_is_alumni != their_is_alumni:
         score += W_ALUMNI
@@ -91,7 +81,7 @@ def score_candidate(
         )
 
     if score == 0:
-        return None   # no signal — exclude from results
+        return None
 
     mutual = len(
         set(str(x) for x in candidate.get("connections", [])) & my_connections
@@ -111,9 +101,7 @@ def score_candidate(
         "match_reasons":       match_reasons,
     }
 
-
-# ── Batch scorers ─────────────────────────────────────────────────────────────
-
+# Batch scorers
 def rank_candidates(
     candidates:      list[dict],
     my_skills:       set[str],

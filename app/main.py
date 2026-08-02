@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
+from app.core.cache import cache
 from app.core.config import settings
 from app.core.limiter import limiter, rate_limit_exceeded_handler
 from app.core.exceptions import (
@@ -61,6 +62,12 @@ async def root():
         "docs": "/docs",
         "base_url": settings.BASE_URL,
     }
+
+# Debug endpoint (Not for production)
+@app.get("/cache/stats")
+async def cache_stats():
+    """Shows current cache contents. Remove before going live."""
+    return cache.stats()
 
 if __name__ == "__main__":
     import uvicorn

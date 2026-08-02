@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from bson.errors import InvalidId
 from fastapi import UploadFile
-
+from app.core.cache import cache, CacheKey, CacheTTL
 from app.core.exceptions import (
     NotFoundException,
     BadRequestException,
@@ -48,6 +48,9 @@ async def create(
 
     inserted_id     = await job_repo.insert(job_dict)
     job_dict["_id"] = inserted_id
+
+    await _invalidate_job_list()
+
     return job_to_response(job_dict)
 
 async def get_all(
@@ -58,10 +61,25 @@ async def get_all(
     skip:      int,
     limit:     int
 ) -> list[JobResponse]:
+    key = CacheKey.job_list(job_type, location, company, search, skip, limit)
+    cached = await cache.get(key)
+
+    if cached is not None:
+        return cached
+
     jobs = await job_repo.find_many(job_type, location, company, search, skip, limit)
-    return [job_to_response(j) for j in jobs]
+    results = [job_to_response(j) for j in jobs]
+
+    await cache.set(key, results, ttl=CacheTTL.JOB_LIST)
+    return results
 
 async def get_by_id(job_id: str) -> JobResponse:
+    key = CacheKey.job_detail(job_id)
+    cached = await cache.get(key)
+
+    if cached is not None:
+        return cached
+
     try:
         job = await job_repo.find_by_id(job_id)
     except InvalidId:
@@ -73,13 +91,11 @@ async def get_by_id(job_id: str) -> JobResponse:
     await job_repo.increment_views(job_id)
     job["views"] = job.get("views", 0) + 1
 
-    return job_to_response(job)
+    result = job_to_response(job)
+    await cache.set(key, result, ttl=CacheTTL.JOB_DETAIL)
+    return result
 
-async def update(
-    job_id:      str,
-    job_update:  JobUpdate,
-    current_user: dict
-) -> JobResponse:
+async def update(job_id: str, job_update: JobUpdate, current_user: dict) -> JobResponse:
     try:
         job = await job_repo.find_by_id(job_id)
     except InvalidId:
@@ -90,11 +106,15 @@ async def update(
     if job["posted_by"] != current_user["_id"]:
         raise ForbiddenException("You don't have permission to update this job")
 
-    update_data = job_update.dict(exclude_unset=True)
+    update_data = job_update.model_dump(exclude_unset=True)
     if not update_data:
         return job_to_response(job)
 
     updated = await job_repo.update_by_id(job_id, update_data)
+
+    await _invalidate_job_list()
+    await cache.delete(CacheKey.job_detail(job_id))
+
     return job_to_response(updated)
 
 async def delete(job_id: str, current_user: dict) -> dict:
@@ -109,8 +129,11 @@ async def delete(job_id: str, current_user: dict) -> dict:
         raise ForbiddenException("You don't have permission to delete this job")
 
     await job_repo.set_inactive(job_id)
-    return {"message": "Job posting deactivated successfully"}
 
+    await _invalidate_job_list()
+    await cache.delete(CacheKey.job_detail(job_id))
+
+    return {"message": "Job posting deactivated successfully"}
 
 async def apply(job_id: str, current_user: dict) -> dict:
     try:
@@ -127,3 +150,6 @@ async def apply(job_id: str, current_user: dict) -> dict:
 
     await job_repo.push_applicant(job_id, current_user["_id"])
     return {"message": "Application submitted successfully"}
+
+async def _invalidate_job_list():
+    await cache.delete_pattern("jobs:")

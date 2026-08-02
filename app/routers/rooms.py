@@ -82,7 +82,7 @@ async def update_room(
     room_update:  RoomUpdate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    update_data = room_update.dict(exclude_unset=True)
+    update_data = room_update.model_dump(exclude_unset=True)
     if not update_data:
         room = await room_service.get_by_id(room_id)
         from app.schemas.room import room_to_response
