@@ -10,12 +10,21 @@ async def get_database():
     return db.client[settings.DATABASE_NAME]
 
 async def connect_to_mongo():
-    db.client = AsyncIOMotorClient(settings.MONGODB_URI)
+    db.client = AsyncIOMotorClient(
+        settings.MONGODB_URI,
+        maxPoolSize=50,        # max connections per Motor client instance
+        minPoolSize=10,        # keep 10 warm — avoids cold-start latency on burst
+        maxIdleTimeMS=45000,            # close idle connections after 45s
+        serverSelectionTimeoutMS=5000,  # fail fast if Atlas is unreachable
+        connectTimeoutMS=10000,         # max time to establish a new connection
+        socketTimeoutMS=30000,          # max time waiting for a response on a socket
+    )
     print("Connected to MongoDB Atlas!")
 
 async def close_mongo_connection():
-    db.client.close()
-    print("Closed MongoDB connection!")
+    if db.client:
+        db.client.close()
+        print("Closed MongoDB connection.")
 
 async def get_users_collection():
     database = await get_database()
