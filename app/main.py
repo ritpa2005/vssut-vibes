@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from app.core.cache import cache
 from app.core.config import settings
 from app.core.limiter import limiter, rate_limit_exceeded_handler
@@ -22,6 +24,8 @@ app = FastAPI(
 
 app.state.limiter = limiter
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
