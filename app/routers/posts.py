@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile, status
 from typing import List
 from app.core.limiter import limiter
 from app.schemas.post import PostUpdate, PostResponse, CommentCreate, CommentResponse
@@ -20,6 +20,7 @@ async def get_posts(
 @limiter.limit("10/minute")
 async def create_post(
     request:      Request,
+    response:     Response,
     content:      str        = Form(...),
     image:        UploadFile = File(None),
     current_user: dict       = Depends(get_current_active_user)
@@ -48,6 +49,7 @@ async def get_post_by_id(
 @limiter.limit("15/minute")
 async def update_post(
     request:      Request,
+    response:     Response,
     post_id:      str,
     post_update:  PostUpdate,
     current_user: dict = Depends(get_current_active_user)
@@ -70,6 +72,7 @@ async def delete_post(
 @limiter.limit("30/minute")
 async def like_post(
     request:      Request,
+    response:     Response,
     post_id:      str,
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -79,6 +82,7 @@ async def like_post(
 @limiter.limit("15/minute")
 async def add_comment(
     request:      Request,
+    response:     Response,
     post_id:      str,
     comment_data: CommentCreate,
     current_user: dict = Depends(get_current_active_user)

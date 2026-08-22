@@ -32,7 +32,7 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
         content={
             "success": False,
             "status":  429,
-            "error":   f"Rate limit exceeded. Try again in {exc.retry_after} seconds.",
+            "error":   f"Rate limit exceeded. Try again later.",
             "retry_after": exc.retry_after,
         },
         headers={

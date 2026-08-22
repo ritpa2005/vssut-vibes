@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile, status
 from typing import List, Optional
 from app.core.limiter import limiter
 from app.schemas.job import JobUpdate, JobResponse
@@ -12,6 +12,7 @@ router = APIRouter(prefix="/jobs", tags=["Jobs & Internships"])
 @limiter.limit("5/minute")
 async def create_job(
     request:      Request,
+    response:     Response,
     title:        str        = Form(...),
     company:      str        = Form(...),
     location:     str        = Form(""),
@@ -56,6 +57,7 @@ async def get_job_by_id(job_id: str):
 @limiter.limit("10/minute")
 async def apply_for_job(
     request:      Request,
+    response:     Response,
     job_id:       str,
     current_user: dict = Depends(get_current_active_user)
 ):

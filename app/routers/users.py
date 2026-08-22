@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
 from typing import List, Optional
 from app.core.limiter import limiter
 from app.schemas.user import UserUpdate, UserResponse
@@ -26,6 +26,7 @@ async def update_current_user(
 @limiter.limit("5/minute")
 async def update_profile_picture(
     request:      Request,
+    response:     Response,
     file:         UploadFile = File(...),
     current_user: dict       = Depends(get_current_active_user)
 ):
@@ -36,6 +37,7 @@ async def update_profile_picture(
 @limiter.limit("10/minute")
 async def suggest_connections(
     request:      Request,
+    response:     Response,
     limit:        int  = Query(10, ge=1, le=50),
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -46,6 +48,7 @@ async def suggest_connections(
 @limiter.limit("10/minute")
 async def suggest_by_department(
     request:      Request,
+    response:     Response,
     limit:        int  = Query(10, ge=1, le=50),
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -56,6 +59,7 @@ async def suggest_by_department(
 @limiter.limit("10/minute")
 async def suggest_by_skills(
     request:      Request,
+    response:     Response,
     limit:        int  = Query(10, ge=1, le=50),
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -77,6 +81,7 @@ async def search_users(
 @limiter.limit("20/minute")
 async def connect_with_user(
     request:      Request,
+    response:     Response,
     user_id:      str,
     current_user: dict = Depends(get_current_active_user)
 ):
